@@ -3,17 +3,30 @@ const Note = require('../models/Note'); // Import the blueprint
 // --- Logic for Searching Notes ---
 const searchNotes = async (req, res) => {
     try {
-        const { query } = req.query;
-        let notes;
+        const { query, branch, semester, sortBy } = req.query;
+        let filter = {};
         
         if (query) {
             const searchRegex = new RegExp(query, 'i'); 
-            notes = await Note.find({
-                $or: [{ title: searchRegex }, { subject: searchRegex }]
-            }).sort({ createdAt: -1 });
-        } else {
-            notes = await Note.find().sort({ createdAt: -1 });
+            filter.$or = [{ title: searchRegex }, { subject: searchRegex }];
         }
+        
+        if (branch) {
+            filter.branch = branch;
+        }
+        
+        if (semester) {
+            filter.semester = Number(semester);
+        }
+
+        let sortOption = { createdAt: -1 };
+        if (sortBy === 'popular') {
+            sortOption = { upvotes: -1, createdAt: -1 };
+        } else if (sortBy === 'oldest') {
+            sortOption = { createdAt: 1 };
+        }
+        
+        const notes = await Note.find(filter).sort(sortOption);
         res.json(notes);
     } catch (err) {
         console.error(err);
@@ -24,12 +37,34 @@ const searchNotes = async (req, res) => {
 // --- Logic for Uploading Notes ---
 const uploadNote = async (req, res) => {
     try {
-        const { title, subject } = req.body;
+        const { title, subject, branch, semester, tags } = req.body;
+        
+        if (!title || !subject || !branch || !semester || !req.file) {
+            return res.status(400).json({ error: 'Missing required fields or file' });
+        }
+        
         const filePath = `/uploads/${req.file.filename}`;
 
-        const newNote = new Note({ title, subject, filePath });
-        const savedNote = await newNote.save();
+        let tagsArray = [];
+        if (tags) {
+            if (Array.isArray(tags)) {
+                tagsArray = tags;
+            } else if (typeof tags === 'string') {
+                tagsArray = tags.split(',').map(t => t.trim()).filter(Boolean);
+            }
+        }
 
+        const newNote = new Note({ 
+            title, 
+            subject, 
+            filePath, 
+            branch, 
+            semester: Number(semester),
+            tags: tagsArray,
+            uploadedBy: req.user.id
+        });
+        
+        const savedNote = await newNote.save();
         res.status(201).json(savedNote);
     } catch (err) {
         console.error(err);
@@ -37,4 +72,87 @@ const uploadNote = async (req, res) => {
     }
 };
 
-module.exports = { searchNotes, uploadNote };
+// --- Logic for Upvoting Notes ---
+const upvoteNote = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body; // 'upvote' or 'downvote'
+        
+        let incValue = 1;
+        if (action === 'downvote') {
+            incValue = -1;
+        }
+        
+        const updatedNote = await Note.findByIdAndUpdate(
+            id,
+            { $inc: { upvotes: incValue } },
+            { new: true }
+        );
+        
+        if (!updatedNote) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+        
+        res.json(updatedNote);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error during upvote' });
+    }
+};
+
+// --- Logic for Adding Comments ---
+const addComment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { text, author } = req.body;
+        
+        if (!text) {
+            return res.status(400).json({ error: 'Comment text is required' });
+        }
+        
+        const note = await Note.findById(id);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+        
+        note.comments.push({ text, author: author || 'Anonymous' });
+        const savedNote = await note.save();
+        
+        res.status(201).json(savedNote);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error adding comment' });
+    }
+};
+
+// --- Logic for Recording Note Visits ---
+const visitNote = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        const User = require('../models/User');
+
+        // Remove from list if already exists, to push it to the top
+        await User.findByIdAndUpdate(userId, {
+            $pull: { recentlyVisited: id }
+        });
+
+        const updatedUser = await User.findByIdAndUpdate(userId, {
+            $push: {
+                recentlyVisited: {
+                    $each: [id],
+                    $position: 0,
+                    $slice: 5
+                }
+            }
+        }, { new: true });
+
+        res.json({ success: true, recentlyVisited: updatedUser.recentlyVisited });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error registering note visit' });
+    }
+};
+
+module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote };
