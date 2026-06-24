@@ -7,8 +7,7 @@ const searchNotes = async (req, res) => {
         let filter = {};
         
         if (query) {
-            const searchRegex = new RegExp(query, 'i'); 
-            filter.$or = [{ title: searchRegex }, { subject: searchRegex }];
+            filter.$text = { $search: query };
         }
         
         if (branch) {
@@ -39,8 +38,8 @@ const uploadNote = async (req, res) => {
     try {
         const { title, subject, branch, semester, tags } = req.body;
         
-        if (!title || !subject || !branch || !semester || !req.file) {
-            return res.status(400).json({ error: 'Missing required fields or file' });
+        if (!req.file) {
+            return res.status(400).json({ error: 'Missing uploaded file' });
         }
         
         const filePath = `/uploads/${req.file.filename}`;
@@ -86,7 +85,7 @@ const upvoteNote = async (req, res) => {
         const updatedNote = await Note.findByIdAndUpdate(
             id,
             { $inc: { upvotes: incValue } },
-            { new: true }
+            { returnDocument: 'after' }
         );
         
         if (!updatedNote) {
@@ -105,10 +104,6 @@ const addComment = async (req, res) => {
     try {
         const { id } = req.params;
         const { text, author } = req.body;
-        
-        if (!text) {
-            return res.status(400).json({ error: 'Comment text is required' });
-        }
         
         const note = await Note.findById(id);
         if (!note) {
@@ -146,7 +141,7 @@ const visitNote = async (req, res) => {
                     $slice: 5
                 }
             }
-        }, { new: true });
+        }, { returnDocument: 'after' });
 
         res.json({ success: true, recentlyVisited: updatedUser.recentlyVisited });
     } catch (err) {

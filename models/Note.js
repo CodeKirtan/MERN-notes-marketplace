@@ -19,4 +19,6 @@ const noteSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+noteSchema.index({ title: 'text', subject: 'text' });
+
 module.exports = mongoose.model('Note', noteSchema);

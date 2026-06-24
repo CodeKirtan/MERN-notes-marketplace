@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
     }
 
     try {
-        const secret = process.env.JWT_SECRET || 'fallback_notes_marketplace_secret_key_123';
+        const secret = process.env.JWT_SECRET;
         const verified = jwt.verify(token, secret);
         req.user = verified; // verified contains { id, email }
         next();
