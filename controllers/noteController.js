@@ -42,7 +42,7 @@ const uploadNote = async (req, res) => {
             return res.status(400).json({ error: 'Missing uploaded file' });
         }
         
-        const filePath = `/uploads/${req.file.filename}`;
+        const filePath = req.file.path; // Cloudinary URL
 
         let tagsArray = [];
         if (tags) {

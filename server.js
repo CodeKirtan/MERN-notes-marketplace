@@ -56,9 +56,9 @@ connectDB();
 // Rate Limiting
 
 const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10, // limit each IP to 10 auth requests per hour to prevent brute force
-    message: { error: 'Too many authentication attempts, please try again after an hour.' }
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // relaxed for development (was 10 per hour)
+    message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
 // Route Middleware

@@ -283,7 +283,11 @@ function App() {
 
   // --- Trigger Preview & Register History Log ---
   const handleViewNotes = async (note) => {
-    setActivePdfUrl(`http://localhost:8000${note.filePath}`);
+    if (note.filePath.startsWith('http')) {
+      setActivePdfUrl(note.filePath);
+    } else {
+      setActivePdfUrl(`http://localhost:8000${note.filePath}`);
+    }
     setActivePdfTitle(note.title);
 
     try {
