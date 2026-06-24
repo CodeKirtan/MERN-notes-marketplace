@@ -5,15 +5,15 @@ const searchNotes = async (req, res) => {
     try {
         const { query, branch, semester, sortBy } = req.query;
         let filter = {};
-        
+
         if (query) {
             filter.$text = { $search: query };
         }
-        
+
         if (branch) {
             filter.branch = branch;
         }
-        
+
         if (semester) {
             filter.semester = Number(semester);
         }
@@ -24,7 +24,7 @@ const searchNotes = async (req, res) => {
         } else if (sortBy === 'oldest') {
             sortOption = { createdAt: 1 };
         }
-        
+
         const notes = await Note.find(filter).sort(sortOption);
         res.json(notes);
     } catch (err) {
@@ -37,11 +37,11 @@ const searchNotes = async (req, res) => {
 const uploadNote = async (req, res) => {
     try {
         const { title, subject, branch, semester, tags } = req.body;
-        
+
         if (!req.file) {
             return res.status(400).json({ error: 'Missing uploaded file' });
         }
-        
+
         const filePath = req.file.path; // Cloudinary URL
 
         let tagsArray = [];
@@ -53,16 +53,16 @@ const uploadNote = async (req, res) => {
             }
         }
 
-        const newNote = new Note({ 
-            title, 
-            subject, 
-            filePath, 
-            branch, 
+        const newNote = new Note({
+            title,
+            subject,
+            filePath,
+            branch,
             semester: Number(semester),
             tags: tagsArray,
             uploadedBy: req.user.id
         });
-        
+
         const savedNote = await newNote.save();
         res.status(201).json(savedNote);
     } catch (err) {
@@ -75,23 +75,22 @@ const uploadNote = async (req, res) => {
 const upvoteNote = async (req, res) => {
     try {
         const { id } = req.params;
-        const { action } = req.body; // 'upvote' or 'downvote'
-        
-        let incValue = 1;
-        if (action === 'downvote') {
-            incValue = -1;
-        }
-        
-        const updatedNote = await Note.findByIdAndUpdate(
-            id,
-            { $inc: { upvotes: incValue } },
-            { returnDocument: 'after' }
-        );
-        
-        if (!updatedNote) {
+        const userId = req.user.id;
+
+        const note = await Note.findById(id);
+        if (!note) {
             return res.status(404).json({ error: 'Note not found' });
         }
-        
+
+        const hasUpvoted = note.upvotedBy.includes(userId);
+
+        if (hasUpvoted) {
+            note.upvotedBy.pull(userId);
+        } else {
+            note.upvotedBy.push(userId);
+        }
+
+        const updatedNote = await note.save();
         res.json(updatedNote);
     } catch (err) {
         console.error(err);
@@ -103,16 +102,22 @@ const upvoteNote = async (req, res) => {
 const addComment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { text, author } = req.body;
-        
+        const { text } = req.body;
+
         const note = await Note.findById(id);
         if (!note) {
             return res.status(404).json({ error: 'Note not found' });
         }
-        
-        note.comments.push({ text, author: author || 'Anonymous' });
+
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        note.comments.push({ text, author: user.name, user: user._id });
         const savedNote = await note.save();
-        
+
         res.status(201).json(savedNote);
     } catch (err) {
         console.error(err);
@@ -150,4 +155,35 @@ const visitNote = async (req, res) => {
     }
 };
 
-module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote };
+// --- Logic for Deleting Comments ---
+const deleteComment = async (req, res) => {
+    try {
+        const { noteId, commentId } = req.params;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const comment = note.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        // Enforce ownership: only the user who created the comment can delete it
+        if (!comment.user || comment.user.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized: You can only delete your own comments' });
+        }
+
+        // Remove the comment
+        note.comments.pull(commentId);
+
+        const savedNote = await note.save();
+        res.json(savedNote);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error deleting comment' });
+    }
+};
+
+module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment };

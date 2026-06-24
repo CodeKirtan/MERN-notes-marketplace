@@ -424,7 +424,7 @@
 
 .comment-inputs-row {
   display: grid;
-  grid-template-columns: 100px 1fr auto;
+  grid-template-columns: 1fr auto;
   gap: 8px;
 }
 
@@ -443,6 +443,7 @@
   font-size: 0.85rem;
   font-family: inherit;
   transition: var(--transition-smooth);
+  min-width: 0;
 }
 
 .comment-input:focus {
@@ -463,8 +464,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(5, 8, 16, 0.85);
+  background: rgba(5, 8, 16, 0.5);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
   display: flex;
   align-items: center;

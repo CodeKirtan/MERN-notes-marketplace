@@ -8,11 +8,12 @@ const noteSchema = new mongoose.Schema({
     semester: { type: Number, required: true, default: 1 },
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     tags: { type: [String], default: [] },
-    upvotes: { type: Number, default: 0 },
+    upvotedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [
         {
             text: { type: String, required: true },
-            author: { type: String, default: 'Anonymous' },
+            author: { type: String, required: true },
+            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
             createdAt: { type: Date, default: Date.now }
         }
     ],

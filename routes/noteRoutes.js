@@ -4,10 +4,10 @@ const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 const path = require('path');
-const { searchNotes, uploadNote, upvoteNote, addComment, visitNote } = require('../controllers/noteController');
+const { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment } = require('../controllers/noteController');
 const auth = require('../middleware/auth');
 const validate = require('../middleware/validate');
-const { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema } = require('../validators/noteValidator');
+const { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema } = require('../validators/noteValidator');
 
 // Cloudinary Storage Config
 // Note: Cloudinary will automatically use process.env.CLOUDINARY_URL
@@ -26,5 +26,6 @@ router.post('/upload', auth, upload.single('file'), validate(uploadNoteSchema), 
 router.post('/notes/:id/upvote', auth, validate(upvoteNoteSchema), upvoteNote);
 router.post('/notes/:id/comments', auth, validate(addCommentSchema), addComment);
 router.post('/notes/:id/visit', auth, visitNote);
+router.delete('/notes/:noteId/comments/:commentId', auth, validate(deleteCommentSchema), deleteComment);
 
 module.exports = router;

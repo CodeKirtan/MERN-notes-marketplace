@@ -23,9 +23,7 @@ const upvoteNoteSchema = z.object({
     params: z.object({
         id: z.string().min(1, 'Note ID is required')
     }),
-    body: z.object({
-        action: z.enum(['upvote', 'downvote'], { required_error: "Action must be 'upvote' or 'downvote'" })
-    })
+    body: z.object({}).optional()
 });
 
 const addCommentSchema = z.object({
@@ -33,9 +31,15 @@ const addCommentSchema = z.object({
         id: z.string().min(1, 'Note ID is required')
     }),
     body: z.object({
-        text: z.string({ required_error: 'Comment text is required' }).min(1, 'Comment text is required'),
-        author: z.string().optional()
+        text: z.string({ required_error: 'Comment text is required' }).min(1, 'Comment text is required')
     })
 });
 
-module.exports = { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema };
+const deleteCommentSchema = z.object({
+    params: z.object({
+        noteId: z.string().min(1, 'Note ID is required'),
+        commentId: z.string().min(1, 'Comment ID is required')
+    })
+});
+
+module.exports = { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema };
