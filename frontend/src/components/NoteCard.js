@@ -8,6 +8,19 @@ const NoteCard = ({ note, onUpdateNote, onViewPdf }) => {
   const [commentText, setCommentText] = useState('');
 
   const handleUpvote = async () => {
+    if (!user) return; // Must be logged in
+
+    const hasVoted = note.upvotedBy?.includes(user.id);
+    
+    // Optimistic Update
+    const optimisticNote = {
+      ...note,
+      upvotedBy: hasVoted 
+        ? note.upvotedBy.filter(id => id !== user.id)
+        : [...(note.upvotedBy || []), user.id]
+    };
+    onUpdateNote(optimisticNote);
+
     try {
       const response = await fetch(`${API_URL}/api/notes/${note._id}/upvote`, {
         method: 'POST',
@@ -17,10 +30,13 @@ const NoteCard = ({ note, onUpdateNote, onViewPdf }) => {
       });
       if (response.ok) {
         const updatedNote = await response.json();
-        onUpdateNote(updatedNote);
+        onUpdateNote(updatedNote); // Sync with actual server response
+      } else {
+        onUpdateNote(note); // Revert on failure
       }
     } catch (err) {
       console.error("Upvote error:", err);
+      onUpdateNote(note); // Revert on failure
     }
   };
 
@@ -30,7 +46,24 @@ const NoteCard = ({ note, onUpdateNote, onViewPdf }) => {
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || !user) return;
+
+    // Optimistic Update
+    const optimisticComment = {
+      _id: `temp-${Date.now()}`,
+      text: commentText,
+      author: user.name || 'You',
+      user: user.id,
+      createdAt: new Date().toISOString()
+    };
+    
+    const optimisticNote = {
+      ...note,
+      comments: [...(note.comments || []), optimisticComment]
+    };
+    onUpdateNote(optimisticNote);
+    const submittedText = commentText;
+    setCommentText('');
 
     try {
       const response = await fetch(`${API_URL}/api/notes/${note._id}/comments`, {
@@ -39,16 +72,20 @@ const NoteCard = ({ note, onUpdateNote, onViewPdf }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ text: commentText })
+        body: JSON.stringify({ text: submittedText })
       });
 
       if (response.ok) {
         const updatedNote = await response.json();
         onUpdateNote(updatedNote);
-        setCommentText('');
+      } else {
+        onUpdateNote(note); // Revert
+        setCommentText(submittedText);
       }
     } catch (err) {
       console.error("Comment submit error:", err);
+      onUpdateNote(note); // Revert
+      setCommentText(submittedText);
     }
   };
 

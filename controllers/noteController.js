@@ -29,7 +29,7 @@ const searchNotes = async (req, res) => {
         const limitNumber = parseInt(limit, 10);
         const skip = (pageNumber - 1) * limitNumber;
 
-        const notes = await Note.find(filter).sort(sortOption).skip(skip).limit(limitNumber);
+        const notes = await Note.find(filter).sort(sortOption).skip(skip).limit(limitNumber).lean();
         const total = await Note.countDocuments(filter);
         
         res.json({
