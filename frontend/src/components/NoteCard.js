@@ -118,6 +118,10 @@ const NoteCard = ({ note, onUpdateNote, onViewPdf }) => {
 
       <p className="note-subject">{note.subject}</p>
 
+      <p className="note-uploader" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+        Uploaded by: <strong>{note.uploadedBy?.name || 'Unknown User'}</strong>
+      </p>
+
       <div className="badge-container">
         <span className="badge badge-semester">Sem {note.semester}</span>
         {note.tags && note.tags.map(tag => (
