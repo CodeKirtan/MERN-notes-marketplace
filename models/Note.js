@@ -21,5 +21,7 @@ const noteSchema = new mongoose.Schema({
 });
 
 noteSchema.index({ title: 'text', subject: 'text' });
+noteSchema.index({ branch: 1, semester: 1, createdAt: -1 });
+noteSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Note', noteSchema);

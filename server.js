@@ -61,6 +61,9 @@ const authLimiter = rateLimit({
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
+// Health Check Endpoint for UptimeRobot (prevents Render cold starts)
+app.get('/api/health', (req, res) => res.status(200).send('OK'));
+
 // Route Middleware
 app.use('/api', noteRoutes); // Sends all /api requests to your routes file
 app.use('/api/auth', authLimiter, authRoutes);

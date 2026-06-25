@@ -17,45 +17,75 @@ const Dashboard = () => {
   const [filterSemester, setFilterSemester] = useState('');
   const [sortBy, setSortBy] = useState('recent');
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [activePdfUrl, setActivePdfUrl] = useState(null);
   const [activePdfTitle, setActivePdfTitle] = useState(null);
 
-  const fetchNotes = useCallback(async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchQuery, filterBranch, filterSemester, sortBy]);
+
+  const fetchNotes = useCallback(async (isLoadMore = false) => {
     if (!token) return;
     try {
-      setError(null);
+      if (!isLoadMore) setError(null);
       const params = new URLSearchParams();
-      if (searchQuery) params.append('query', searchQuery);
+      if (debouncedSearchQuery) params.append('query', debouncedSearchQuery);
       if (filterBranch) params.append('branch', filterBranch);
       if (filterSemester) params.append('semester', filterSemester);
       if (sortBy) params.append('sortBy', sortBy);
+      params.append('page', page);
+      params.append('limit', 10);
 
       const response = await fetch(`${API_URL}/api/search?${params.toString()}`);
       const data = await response.json();
       
-      if (Array.isArray(data)) {
-        setNotes(data);
+      if (data.notes && Array.isArray(data.notes)) {
+        if (isLoadMore) {
+          setNotes(prev => [...prev, ...data.notes]);
+        } else {
+          setNotes(data.notes);
+        }
+        setHasMore(data.currentPage < data.totalPages);
+      } else if (Array.isArray(data)) {
+        // Fallback for older backend format just in case
+        if (isLoadMore) {
+          setNotes(prev => [...prev, ...data]);
+        } else {
+          setNotes(data);
+        }
+        setHasMore(false);
       } else {
-        setNotes([]);
+        if (!isLoadMore) setNotes([]);
         setError(data.error || "Failed to retrieve notes from server.");
+        setHasMore(false);
       }
     } catch (error) {
       console.error("Error fetching notes:", error);
-      setNotes([]);
+      if (!isLoadMore) setNotes([]);
       setError("Unable to connect to the backend server.");
+      setHasMore(false);
     }
-  }, [searchQuery, filterBranch, filterSemester, sortBy, token]);
+  }, [debouncedSearchQuery, filterBranch, filterSemester, sortBy, page, token]);
 
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    fetchNotes(page > 1);
+  }, [fetchNotes, page]);
 
-  const handleUpdateNote = (updatedNote) => {
+  const handleUpdateNote = useCallback((updatedNote) => {
     setNotes(prev => prev.map(n => n._id === updatedNote._id ? updatedNote : n));
-  };
+  }, []);
 
-  const handleViewNotes = async (note) => {
+  const handleViewNotes = useCallback(async (note) => {
     if (note.filePath.startsWith('http')) {
       setActivePdfUrl(note.filePath);
     } else {
@@ -71,7 +101,7 @@ const Dashboard = () => {
     } catch (err) {
       console.error("Failed to register visit", err);
     }
-  };
+  }, [token]);
 
   return (
     <div className="dashboard-layout">
@@ -110,6 +140,18 @@ const Dashboard = () => {
             )
           )}
         </div>
+
+        {hasMore && !error && (
+          <div style={{ textAlign: 'center', marginTop: '30px' }}>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setPage(prev => prev + 1)}
+              style={{ padding: '10px 30px', fontSize: '1rem' }}
+            >
+              Load More
+            </button>
+          </div>
+        )}
       </main>
 
       {showUploadForm && (

@@ -3,7 +3,7 @@ const Note = require('../models/Note'); // Import the blueprint
 // --- Logic for Searching Notes ---
 const searchNotes = async (req, res) => {
     try {
-        const { query, branch, semester, sortBy } = req.query;
+        const { query, branch, semester, sortBy, page = 1, limit = 10 } = req.query;
         let filter = {};
 
         if (query) {
@@ -25,8 +25,19 @@ const searchNotes = async (req, res) => {
             sortOption = { createdAt: 1 };
         }
 
-        const notes = await Note.find(filter).sort(sortOption);
-        res.json(notes);
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * limitNumber;
+
+        const notes = await Note.find(filter).sort(sortOption).skip(skip).limit(limitNumber);
+        const total = await Note.countDocuments(filter);
+        
+        res.json({
+            notes,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(total / limitNumber),
+            totalNotes: total
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error during search' });

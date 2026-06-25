@@ -169,4 +169,4 @@ const NoteCard = ({ note, onUpdateNote, onViewPdf }) => {
   );
 };
 
-export default NoteCard;
+export default React.memo(NoteCard);
