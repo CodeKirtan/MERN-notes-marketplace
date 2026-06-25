@@ -17,6 +17,8 @@ const noteSchema = new mongoose.Schema({
             createdAt: { type: Date, default: Date.now }
         }
     ],
+    fileHash: { type: String, unique: true, sparse: true },
+    recentVisits: { type: [Date], default: [] },
     createdAt: { type: Date, default: Date.now }
 });
 

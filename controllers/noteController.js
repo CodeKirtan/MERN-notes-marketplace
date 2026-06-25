@@ -1,4 +1,7 @@
 const Note = require('../models/Note'); // Import the blueprint
+const crypto = require('crypto');
+const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 
 // --- Logic for Searching Notes ---
 const searchNotes = async (req, res) => {
@@ -29,8 +32,43 @@ const searchNotes = async (req, res) => {
         const limitNumber = parseInt(limit, 10);
         const skip = (pageNumber - 1) * limitNumber;
 
-        const notes = await Note.find(filter).populate('uploadedBy', 'name').sort(sortOption).skip(skip).limit(limitNumber).lean();
-        const total = await Note.countDocuments(filter);
+        let notes;
+        let total;
+
+        if (sortBy === 'trending') {
+            // Sliding Window: Only count visits in the last 24 hours
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            
+            const aggregationPipeline = [
+                { $match: filter },
+                { $addFields: {
+                    recentVisitsFiltered: {
+                        $filter: {
+                            input: { $ifNull: ["$recentVisits", []] },
+                            as: "visit",
+                            cond: { $gte: ["$$visit", twentyFourHoursAgo] }
+                        }
+                    }
+                }},
+                { $addFields: { trendingScore: { $size: "$recentVisitsFiltered" } } },
+                { $sort: { trendingScore: -1, createdAt: -1 } },
+                { $skip: skip },
+                { $limit: limitNumber },
+                { $project: { recentVisitsFiltered: 0, recentVisits: 0 } } // Clean up output
+            ];
+            
+            notes = await Note.aggregate(aggregationPipeline);
+            notes = await Note.populate(notes, { path: 'uploadedBy', select: 'name' });
+            total = await Note.countDocuments(filter);
+        } else {
+            notes = await Note.find(filter)
+                        .populate('uploadedBy', 'name')
+                        .sort(sortOption)
+                        .skip(skip)
+                        .limit(limitNumber)
+                        .lean();
+            total = await Note.countDocuments(filter);
+        }
         
         res.json({
             notes,
@@ -53,7 +91,31 @@ const uploadNote = async (req, res) => {
             return res.status(400).json({ error: 'Missing uploaded file' });
         }
 
-        const filePath = req.file.path; // Cloudinary URL
+        // 1. Calculate SHA-256 Hash of the file
+        const fileBuffer = fs.readFileSync(req.file.path);
+        const hashSum = crypto.createHash('sha256');
+        hashSum.update(fileBuffer);
+        const fileHash = hashSum.digest('hex');
+
+        // 2. Check for Duplicates in O(1) time
+        const existingNote = await Note.findOne({ fileHash });
+        if (existingNote) {
+            fs.unlinkSync(req.file.path); // Delete local temp file
+            return res.status(409).json({ 
+                error: 'Duplicate file detected. This exact file already exists on our servers.',
+                existingNoteId: existingNote._id
+            });
+        }
+
+        // 3. Upload to Cloudinary
+        const cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'notes_marketplace_uploads',
+            resource_type: 'auto'
+        });
+        const filePath = cloudinaryResult.secure_url; 
+        
+        // Clean up local temp file
+        fs.unlinkSync(req.file.path);
 
         let tagsArray = [];
         if (tags) {
@@ -68,6 +130,7 @@ const uploadNote = async (req, res) => {
             title,
             subject,
             filePath,
+            fileHash,
             branch,
             semester: Number(semester),
             tags: tagsArray,
@@ -78,6 +141,9 @@ const uploadNote = async (req, res) => {
         res.status(201).json(savedNote);
     } catch (err) {
         console.error(err);
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
         res.status(500).json({ error: 'Server error during upload' });
     }
 };
@@ -158,6 +224,11 @@ const visitNote = async (req, res) => {
                 }
             }
         }, { returnDocument: 'after' });
+
+        // Record visit for Trending Notes sliding window
+        await Note.findByIdAndUpdate(id, {
+            $push: { recentVisits: new Date() }
+        });
 
         res.json({ success: true, recentlyVisited: updatedUser.recentlyVisited });
     } catch (err) {

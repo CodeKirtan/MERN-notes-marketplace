@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/ProfilePage';
+import TrendingPage from './pages/TrendingPage';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -34,6 +35,15 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/trending" 
+          element={
+            <ProtectedRoute>
+              <TrendingPage />
             </ProtectedRoute>
           } 
         />

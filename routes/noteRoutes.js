@@ -1,21 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment } = require('../controllers/noteController');
 const auth = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema } = require('../validators/noteValidator');
 
-// Cloudinary Storage Config
-// Note: Cloudinary will automatically use process.env.CLOUDINARY_URL
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'notes_marketplace_uploads',
-        resource_type: 'auto' // Important: allows PDFs and raw files, not just images
+// Local Storage Config (Files uploaded to disk first for hashing)
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/')
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
     }
 });
 const upload = multer({ storage: storage });

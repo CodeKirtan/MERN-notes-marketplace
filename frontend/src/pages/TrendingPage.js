@@ -6,54 +6,26 @@ import NoteCard from '../components/NoteCard';
 import UploadModal from '../components/UploadModal';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 
-const BRANCHES = [
-  "Computer Science",
-  "Information Technology",
-  "Electronics & Comm",
-  "Electrical Engineering",
-  "Mechanical Engineering",
-  "Civil Engineering",
-  "Chemical Engineering",
-  "Other"
-];
-
-const Dashboard = () => {
+const TrendingPage = () => {
   const { token } = useAuth();
   
   const [notes, setNotes] = useState([]);
   const [error, setError] = useState(null);
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterBranch, setFilterBranch] = useState('');
-  const [filterSemester, setFilterSemester] = useState('');
-  const [sortBy, setSortBy] = useState('recent'); // Default
-
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [activePdfUrl, setActivePdfUrl] = useState(null);
   const [activePdfTitle, setActivePdfTitle] = useState(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearchQuery, filterBranch, filterSemester, sortBy]);
-
-  const fetchNotes = useCallback(async (isLoadMore = false) => {
+  const fetchTrendingNotes = useCallback(async (isLoadMore = false) => {
     if (!token) return;
     try {
       if (!isLoadMore) setError(null);
+      
+      // Specifically query for trending notes
       const params = new URLSearchParams();
-      if (debouncedSearchQuery) params.append('query', debouncedSearchQuery);
-      if (filterBranch) params.append('branch', filterBranch);
-      if (filterSemester) params.append('semester', filterSemester);
-      if (sortBy) params.append('sortBy', sortBy);
+      params.append('sortBy', 'trending');
       params.append('page', page);
       params.append('limit', 10);
 
@@ -69,20 +41,20 @@ const Dashboard = () => {
         setHasMore(data.currentPage < data.totalPages);
       } else {
         if (!isLoadMore) setNotes([]);
-        setError(data.error || "Failed to retrieve notes from server.");
+        setError(data.error || "Failed to retrieve trending notes.");
         setHasMore(false);
       }
     } catch (error) {
-      console.error("Error fetching notes:", error);
+      console.error("Error fetching trending notes:", error);
       if (!isLoadMore) setNotes([]);
       setError("Unable to connect to the backend server.");
       setHasMore(false);
     }
-  }, [debouncedSearchQuery, filterBranch, filterSemester, sortBy, page, token]);
+  }, [page, token]);
 
   useEffect(() => {
-    fetchNotes(page > 1);
-  }, [fetchNotes, page]);
+    fetchTrendingNotes(page > 1);
+  }, [fetchTrendingNotes, page]);
 
   const handleUpdateNote = useCallback((updatedNote) => {
     setNotes(prev => prev.map(n => n._id === updatedNote._id ? updatedNote : n));
@@ -111,55 +83,37 @@ const Dashboard = () => {
       <Sidebar onOpenUpload={() => setShowUploadForm(true)} />
 
       <main className="main-content-area">
-        
         <div className="feed-header">
-          <h2 className="section-title">Explore Notes</h2>
-          
-          <div className="top-filter-bar glass-panel">
-            <input 
-              type="text" 
-              className="input-field filter-search" 
-              placeholder="Search title, subject..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <select className="input-field filter-select" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
-              <option value="">All Branches</option>
-              {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-            <select className="input-field filter-select" value={filterSemester} onChange={(e) => setFilterSemester(e.target.value)}>
-              <option value="">All Semesters</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => <option key={sem} value={sem}>Sem {sem}</option>)}
-            </select>
-            <select className="input-field filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="recent">Newest</option>
-              <option value="popular">Most Upvoted</option>
-              <option value="oldest">Oldest</option>
-            </select>
-          </div>
+          <h2 className="section-title">
+            <span style={{ marginRight: '10px' }}>🔥</span> 
+            Trending in the last 24 hours
+          </h2>
+          <p className="section-subtitle">Discover the most viral and helpful notes right now.</p>
         </div>
 
         {error && (
-          <div className="glass-panel" style={{ backgroundColor: 'rgba(255, 77, 79, 0.1)', color: 'var(--danger-color)', borderLeft: '4px solid var(--danger-color)', marginBottom: '20px' }}>
+          <div className="glass-panel error-panel">
             <strong>Connection Error:</strong> {error}
           </div>
         )}
 
         <div className="notes-grid">
           {notes.length > 0 ? (
-            notes.map((note) => (
-              <NoteCard 
-                key={note._id} 
-                note={note} 
-                onUpdateNote={handleUpdateNote} 
-                onViewPdf={handleViewNotes}
-              />
+            notes.map((note, index) => (
+              <div key={note._id} className="trending-card-wrapper">
+                <div className="trending-rank">#{index + 1 + ((page - 1) * 10)}</div>
+                <NoteCard 
+                  note={note} 
+                  onUpdateNote={handleUpdateNote} 
+                  onViewPdf={handleViewNotes}
+                />
+              </div>
             ))
           ) : (
             !error && (
               <div className="glass-panel empty-state">
-                <h3>No notes found</h3>
-                <p>Try adjusting your filters or be the first to upload one!</p>
+                <h3>No trending notes yet</h3>
+                <p>Be the first to upload and share an amazing note!</p>
               </div>
             )
           )}
@@ -178,7 +132,6 @@ const Dashboard = () => {
         <UploadModal 
           onClose={() => setShowUploadForm(false)} 
           onUploadSuccess={(newNote) => {
-            setNotes(prev => [newNote, ...prev]);
             alert('Upload successful!');
           }} 
         />
@@ -198,4 +151,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default TrendingPage;
