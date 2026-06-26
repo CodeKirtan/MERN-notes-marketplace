@@ -935,10 +935,12 @@
   font-size: 1.1rem;
 }
 
-.comments-list {
+.split-right .comments-list {
   flex: 1;
-  overflow-y: auto;
+  max-height: none;
+  margin-bottom: 0;
   padding: 16px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
