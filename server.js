@@ -41,9 +41,9 @@ const connectDB = async () => {
         console.log('✅ Connected to MongoDB Atlas');
     } catch (err) {
         console.error('❌ MongoDB Atlas connection error:', err.message);
-        console.log('🔌 Attempting local MongoDB fallback (mongodb://127.0.0.1:27017/notes_marketplace)...');
+        console.log('🔌 Attempting local MongoDB fallback (mongodb://127.0.0.1:27017/notes_hub)...');
         try {
-            await mongoose.connect('mongodb://127.0.0.1:27017/notes_marketplace');
+            await mongoose.connect('mongodb://127.0.0.1:27017/notes_hub');
             console.log('✅ Connected successfully to local MongoDB!');
         } catch (localErr) {
             console.error('❌ Local MongoDB fallback failed:', localErr.message);

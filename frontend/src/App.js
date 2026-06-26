@@ -22,7 +22,7 @@ const AppRoutes = () => {
     <div className="app-container">
       {token && user && (
         <header className="app-header">
-          <h1 className="app-title">📚 Notes Marketplace</h1>
+          <h1 className="app-title">📚 Notes Hub</h1>
           <p className="app-subtitle">Access student-uploaded exam notes, lecture digests, and study guides instantly.</p>
         </header>
       )}

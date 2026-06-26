@@ -109,7 +109,7 @@ const uploadNote = async (req, res) => {
 
         // 3. Upload to Cloudinary
         const cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
-            folder: 'notes_marketplace_uploads',
+            folder: 'notes_hub_uploads',
             resource_type: 'auto'
         });
         const filePath = cloudinaryResult.secure_url; 
