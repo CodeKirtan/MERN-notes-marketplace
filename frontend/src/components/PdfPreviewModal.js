@@ -8,6 +8,7 @@ const PdfPreviewModal = ({ note, onClose }) => {
   const [newComment, setNewComment] = useState('');
   const [replyText, setReplyText] = useState('');
   const [activeReplyId, setActiveReplyId] = useState(null);
+  const [expandedReplies, setExpandedReplies] = useState({});
 
   const pdfUrl = note.filePath.startsWith('http') ? note.filePath : `${API_URL}${note.filePath}`;
 
@@ -151,19 +152,31 @@ const PdfPreviewModal = ({ note, onClose }) => {
 
                   {/* Replies List */}
                   {comment.replies && comment.replies.length > 0 && (
-                    <div className="replies-list">
-                      {comment.replies.map(reply => (
-                        <div key={reply._id} className="reply-box">
-                          <div className="comment-header">
-                            <span className="comment-author">{reply.author}</span>
-                            <span className="comment-date">{new Date(reply.createdAt).toLocaleDateString()}</span>
-                          </div>
-                          <p className="comment-text">{reply.text}</p>
-                          {user && reply.user === user.id && (
-                            <button className="btn-delete" onClick={() => handleDeleteReply(comment._id, reply._id)}>Delete</button>
-                          )}
+                    <div className="replies-section">
+                      <button 
+                        className="btn-reply" 
+                        style={{marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)'}}
+                        onClick={() => setExpandedReplies(prev => ({...prev, [comment._id]: !prev[comment._id]}))}
+                      >
+                        {expandedReplies[comment._id] ? 'Hide Replies' : `View Replies (${comment.replies.length})`}
+                      </button>
+                      
+                      {expandedReplies[comment._id] && (
+                        <div className="replies-list">
+                          {comment.replies.map(reply => (
+                            <div key={reply._id} className="reply-box">
+                              <div className="comment-header">
+                                <span className="comment-author">{reply.author}</span>
+                                <span className="comment-date">{new Date(reply.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <p className="comment-text">{reply.text}</p>
+                              {user && reply.user === user.id && (
+                                <button className="btn-delete" onClick={() => handleDeleteReply(comment._id, reply._id)}>Delete</button>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
 
