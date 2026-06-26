@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 const PdfPreviewModal = ({ note, onClose }) => {
   const { token, user } = useAuth();
+  const [localNote, setLocalNote] = useState(note);
   const [comments, setComments] = useState(note?.comments || []);
   const [newComment, setNewComment] = useState('');
   const [replyText, setReplyText] = useState('');
@@ -20,8 +21,11 @@ const PdfPreviewModal = ({ note, onClose }) => {
         const response = await fetch(`${API_URL}/api/search?query=${encodeURIComponent(note.title)}`);
         const data = await response.json();
         const latestNote = data.notes?.find(n => n._id === note._id);
-        if (latestNote && latestNote.comments) {
-          setComments(latestNote.comments);
+        if (latestNote) {
+          setLocalNote(latestNote);
+          if (latestNote.comments) {
+            setComments(latestNote.comments);
+          }
         }
       } catch (err) {
         console.error("Error fetching latest comments:", err);
@@ -29,6 +33,22 @@ const PdfPreviewModal = ({ note, onClose }) => {
     };
     fetchLatestNote();
   }, [note._id, note.title]);
+
+  const handleUpvote = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`${API_URL}/api/notes/${localNote._id}/upvote`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const updatedNote = await response.json();
+        setLocalNote(updatedNote);
+      }
+    } catch (err) {
+      console.error("Upvote error:", err);
+    }
+  };
 
   const handlePostComment = async () => {
     if (!newComment.trim()) return;
@@ -197,7 +217,7 @@ const PdfPreviewModal = ({ note, onClose }) => {
             )}
           </div>
 
-          <div className="comment-input-area">
+          <div className="comment-input-area" style={{ marginTop: 'auto' }}>
             <textarea 
               className="comment-textarea" 
               placeholder="Ask a doubt or start a discussion..."
@@ -206,8 +226,18 @@ const PdfPreviewModal = ({ note, onClose }) => {
             />
             <button className="btn btn-primary btn-post-comment" onClick={handlePostComment}>Post</button>
           </div>
-        </div>
 
+          <div className="pdf-modal-footer" style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(15, 23, 42, 0.9)' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Found this helpful?</span>
+            <button 
+              className={`btn-upvote ${localNote.upvotedBy?.includes(user?.id) ? 'voted' : ''}`}
+              onClick={handleUpvote}
+              style={{ fontSize: '0.9rem', padding: '6px 12px' }}
+            >
+              👍 <span className="action-count">{(localNote.upvotedBy?.length || 0) + Math.max(0, localNote.upvotes || 0)}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
