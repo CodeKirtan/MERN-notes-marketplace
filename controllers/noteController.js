@@ -268,4 +268,70 @@ const deleteComment = async (req, res) => {
     }
 };
 
-module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment };
+// --- Logic for Adding Replies ---
+const addReply = async (req, res) => {
+    try {
+        const { noteId, commentId } = req.params;
+        const { text } = req.body;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const comment = note.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        comment.replies.push({ text, author: user.name, user: user._id });
+        const savedNote = await note.save();
+
+        res.status(201).json(savedNote);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error adding reply' });
+    }
+};
+
+// --- Logic for Deleting Replies ---
+const deleteReply = async (req, res) => {
+    try {
+        const { noteId, commentId, replyId } = req.params;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const comment = note.comments.id(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        const reply = comment.replies.id(replyId);
+        if (!reply) {
+            return res.status(404).json({ error: 'Reply not found' });
+        }
+
+        if (!reply.user || reply.user.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized: You can only delete your own replies' });
+        }
+
+        comment.replies.pull(replyId);
+
+        const savedNote = await note.save();
+        res.json(savedNote);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error deleting reply' });
+    }
+};
+
+module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment, addReply, deleteReply };

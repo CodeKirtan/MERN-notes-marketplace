@@ -42,4 +42,22 @@ const deleteCommentSchema = z.object({
     })
 });
 
-module.exports = { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema };
+const addReplySchema = z.object({
+    params: z.object({
+        noteId: z.string().min(1, 'Note ID is required'),
+        commentId: z.string().min(1, 'Comment ID is required')
+    }),
+    body: z.object({
+        text: z.string({ required_error: 'Reply text is required' }).min(1, 'Reply text is required')
+    })
+});
+
+const deleteReplySchema = z.object({
+    params: z.object({
+        noteId: z.string().min(1, 'Note ID is required'),
+        commentId: z.string().min(1, 'Comment ID is required'),
+        replyId: z.string().min(1, 'Reply ID is required')
+    })
+});
+
+module.exports = { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema, addReplySchema, deleteReplySchema };

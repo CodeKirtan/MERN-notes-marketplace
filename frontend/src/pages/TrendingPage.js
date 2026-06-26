@@ -15,8 +15,7 @@ const TrendingPage = () => {
   const [hasMore, setHasMore] = useState(false);
 
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [activePdfUrl, setActivePdfUrl] = useState(null);
-  const [activePdfTitle, setActivePdfTitle] = useState(null);
+  const [activeNote, setActiveNote] = useState(null);
 
   const fetchTrendingNotes = useCallback(async (isLoadMore = false) => {
     if (!token) return;
@@ -61,12 +60,7 @@ const TrendingPage = () => {
   }, []);
 
   const handleViewNotes = useCallback(async (note) => {
-    if (note.filePath.startsWith('http')) {
-      setActivePdfUrl(note.filePath);
-    } else {
-      setActivePdfUrl(`${API_URL}${note.filePath}`);
-    }
-    setActivePdfTitle(note.title);
+    setActiveNote(note);
 
     try {
       await fetch(`${API_URL}/api/notes/${note._id}/visit`, {
@@ -137,13 +131,11 @@ const TrendingPage = () => {
         />
       )}
 
-      {activePdfUrl && (
+      {activeNote && (
         <PdfPreviewModal 
-          url={activePdfUrl} 
-          title={activePdfTitle} 
+          note={activeNote} 
           onClose={() => {
-            setActivePdfUrl(null);
-            setActivePdfTitle(null);
+            setActiveNote(null);
           }} 
         />
       )}

@@ -10,10 +10,10 @@ const ProfilePage = () => {
   
   const [profileNotes, setProfileNotes] = useState([]);
   const [recentlyVisited, setRecentlyVisited] = useState([]);
+  const [activeTab, setActiveTab] = useState('uploads');
   
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [activePdfUrl, setActivePdfUrl] = useState(null);
-  const [activePdfTitle, setActivePdfTitle] = useState(null);
+  const [activeNote, setActiveNote] = useState(null);
 
   const fetchUserProfile = useCallback(async () => {
     if (!token) return;
@@ -36,12 +36,7 @@ const ProfilePage = () => {
   }, [fetchUserProfile]);
 
   const handleViewNotes = async (note) => {
-    if (note.filePath.startsWith('http')) {
-      setActivePdfUrl(note.filePath);
-    } else {
-      setActivePdfUrl(`${API_URL}${note.filePath}`);
-    }
-    setActivePdfTitle(note.title);
+    setActiveNote(note);
 
     try {
       await fetch(`${API_URL}/api/notes/${note._id}/visit`, {
@@ -64,57 +59,41 @@ const ProfilePage = () => {
       <main className="main-content-area">
         <h2 className="section-title">Your Profile & Activity</h2>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          
-          <div className="profile-section">
-            <h3 className="profile-section-heading">My Uploaded Notes</h3>
-            {profileNotes.length === 0 ? (
-              <div className="glass-panel" style={{ textAlign: 'center', padding: '30px' }}>
-                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>You haven't uploaded any notes yet.</p>
-              </div>
-            ) : (
-              <div className="list-simple">
-                {profileNotes.map((note) => (
-                  <div key={note._id} className="list-simple-item">
-                    <div className="list-item-info">
-                      <span className="list-item-title">{note.title}</span>
-                      <span className="list-item-subtitle">{note.subject}</span>
-                      <div className="list-item-meta">
-                        <span className="badge badge-branch">{note.branch}</span>
-                        <span className="badge badge-semester">Sem {note.semester}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>👍 {note.upvotes || 0} Upvotes</span>
-                      </div>
-                    </div>
-                    <button 
-                      className="btn btn-secondary"
-                      onClick={() => handleViewNotes(note)}
-                    >
-                      View Document
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="profile-tabs-container">
+          <div className="profile-tabs">
+            <button 
+              className={`tab-btn ${activeTab === 'uploads' ? 'active' : ''}`}
+              onClick={() => setActiveTab('uploads')}
+            >
+              My Uploaded Notes
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              Recently Visited
+            </button>
           </div>
-
-          <div className="profile-section">
-            <h3 className="profile-section-heading">Recently Visited History</h3>
-            {recentlyVisited.length === 0 ? (
-              <div className="glass-panel" style={{ textAlign: 'center', padding: '30px' }}>
-                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No browsing history recorded yet.</p>
-              </div>
-            ) : (
-              <div className="list-simple">
-                {recentlyVisited.map((note) => {
-                  if (!note) return null;
-                  return (
-                    <div key={note._id} className="list-simple-item">
+        </div>
+        
+        <div className="tab-content">
+          {activeTab === 'uploads' && (
+            <div className="profile-section fade-in">
+              {profileNotes.length === 0 ? (
+                <div className="glass-panel" style={{ textAlign: 'center', padding: '40px' }}>
+                  <p style={{ color: 'var(--text-secondary)', margin: 0 }}>You haven't uploaded any notes yet.</p>
+                </div>
+              ) : (
+                <div className="list-simple">
+                  {profileNotes.map((note) => (
+                    <div key={note._id} className="list-simple-item profile-card">
                       <div className="list-item-info">
                         <span className="list-item-title">{note.title}</span>
                         <span className="list-item-subtitle">{note.subject}</span>
                         <div className="list-item-meta">
                           <span className="badge badge-branch">{note.branch}</span>
                           <span className="badge badge-semester">Sem {note.semester}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>👍 {note.upvotes || 0} Upvotes</span>
                         </div>
                       </div>
                       <button 
@@ -124,12 +103,45 @@ const ProfilePage = () => {
                         View Document
                       </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
+          {activeTab === 'history' && (
+            <div className="profile-section fade-in">
+              {recentlyVisited.length === 0 ? (
+                <div className="glass-panel" style={{ textAlign: 'center', padding: '40px' }}>
+                  <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No browsing history recorded yet.</p>
+                </div>
+              ) : (
+                <div className="list-simple">
+                  {recentlyVisited.map((note) => {
+                    if (!note) return null;
+                    return (
+                      <div key={note._id} className="list-simple-item profile-card">
+                        <div className="list-item-info">
+                          <span className="list-item-title">{note.title}</span>
+                          <span className="list-item-subtitle">{note.subject}</span>
+                          <div className="list-item-meta">
+                            <span className="badge badge-branch">{note.branch}</span>
+                            <span className="badge badge-semester">Sem {note.semester}</span>
+                          </div>
+                        </div>
+                        <button 
+                          className="btn btn-secondary"
+                          onClick={() => handleViewNotes(note)}
+                        >
+                          View Document
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 
@@ -143,13 +155,11 @@ const ProfilePage = () => {
         />
       )}
 
-      {activePdfUrl && (
+      {activeNote && (
         <PdfPreviewModal 
-          url={activePdfUrl} 
-          title={activePdfTitle} 
+          note={activeNote} 
           onClose={() => {
-            setActivePdfUrl(null);
-            setActivePdfTitle(null);
+            setActiveNote(null);
           }} 
         />
       )}

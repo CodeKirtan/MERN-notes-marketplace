@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment } = require('../controllers/noteController');
+const { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment, addReply, deleteReply } = require('../controllers/noteController');
 const auth = require('../middleware/auth');
 const validate = require('../middleware/validate');
-const { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema } = require('../validators/noteValidator');
+const { uploadNoteSchema, searchNotesSchema, upvoteNoteSchema, addCommentSchema, deleteCommentSchema, addReplySchema, deleteReplySchema } = require('../validators/noteValidator');
 
 // Local Storage Config (Files uploaded to disk first for hashing)
 const storage = multer.diskStorage({
@@ -26,5 +26,7 @@ router.post('/notes/:id/upvote', auth, validate(upvoteNoteSchema), upvoteNote);
 router.post('/notes/:id/comments', auth, validate(addCommentSchema), addComment);
 router.post('/notes/:id/visit', auth, visitNote);
 router.delete('/notes/:noteId/comments/:commentId', auth, validate(deleteCommentSchema), deleteComment);
+router.post('/notes/:noteId/comments/:commentId/replies', auth, validate(addReplySchema), addReply);
+router.delete('/notes/:noteId/comments/:commentId/replies/:replyId', auth, validate(deleteReplySchema), deleteReply);
 
 module.exports = router;
