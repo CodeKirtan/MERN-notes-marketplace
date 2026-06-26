@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const fs = require('fs');
 const noteRoutes = require('./routes/noteRoutes'); // Import your traffic cop
 const authRoutes = require('./routes/authRoutes');
@@ -32,7 +33,8 @@ if (!fs.existsSync(uploadDir)) {
 app.use('/uploads', express.static('uploads'));
 
 app.use(helmet()); // Secure HTTP headers for API routes
-app.use(express.json());
+app.use(compression()); // Compress responses
+app.use(express.json({ limit: '50kb' })); // Limit JSON payload size
 
 // Connect Database
 const connectDB = async () => {
@@ -54,6 +56,13 @@ const connectDB = async () => {
 connectDB();
 
 // Rate Limiting
+const globalLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 100, // Limit each IP to 100 requests per 5 minutes
+    message: { error: 'Too many requests, please try again later.' }
+});
+
+app.use('/api', globalLimiter); // Apply global rate limiter to all /api routes
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes

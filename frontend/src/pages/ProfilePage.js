@@ -50,6 +50,25 @@ const ProfilePage = () => {
     }
   };
 
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm("Are you sure you want to delete this note? This cannot be undone.")) return;
+    try {
+      const response = await fetch(`${API_URL}/api/notes/${noteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setProfileNotes(prev => prev.filter(n => n._id !== noteId));
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to delete note: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error("Error deleting note", err);
+      alert("Error deleting note.");
+    }
+  };
+
   return (
     <div className="dashboard-layout">
       <Sidebar 
@@ -96,12 +115,21 @@ const ProfilePage = () => {
                           <span style={{ color: 'var(--text-muted)' }}>👍 {note.upvotes || 0} Upvotes</span>
                         </div>
                       </div>
-                      <button 
-                        className="btn btn-secondary"
-                        onClick={() => handleViewNotes(note)}
-                      >
-                        View Document
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          className="btn btn-secondary"
+                          onClick={() => handleViewNotes(note)}
+                        >
+                          View Document
+                        </button>
+                        <button 
+                          className="btn-delete-note"
+                          onClick={() => handleDeleteNote(note._id)}
+                          title="Delete Note"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

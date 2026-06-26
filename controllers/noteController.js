@@ -334,4 +334,30 @@ const deleteReply = async (req, res) => {
     }
 };
 
-module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment, addReply, deleteReply };
+// --- Delete Note ---
+const deleteNote = async (req, res) => {
+    try {
+        const noteId = req.params.id;
+        const userId = req.user.id;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        if (note.uploadedBy.toString() !== userId) {
+            return res.status(403).json({ error: 'Not authorized to delete this note' });
+        }
+
+        // Note: For a complete implementation, we should also delete the file from Cloudinary.
+        // We'd need the public_id of the file to do this effectively.
+        await Note.findByIdAndDelete(noteId);
+
+        res.json({ message: 'Note deleted successfully', noteId });
+    } catch (err) {
+        console.error('Failed to delete note', err);
+        res.status(500).json({ error: 'Server error deleting note' });
+    }
+};
+
+module.exports = { searchNotes, uploadNote, upvoteNote, addComment, visitNote, deleteComment, addReply, deleteReply, deleteNote };
